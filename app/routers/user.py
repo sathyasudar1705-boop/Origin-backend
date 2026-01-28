@@ -1,0 +1,115 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from app.db.database import SessionLocal
+from app.models.user import User
+from app.schemas.user import UserCreate, UserResponse,UserUpdate
+from app.db.dependencies import get_db
+from fastapi.responses import StreamingResponse
+from app.utils.resume_generator import generate_resume_pdf
+from app.models.job_seeker_profile import JobSeekerProfile
+import io
+
+router = APIRouter(prefix="/users", tags=["Users"])
+
+
+
+
+
+
+@router.get("/", response_model=list[UserResponse])
+def get_all_users(db: Session = Depends(get_db)):
+    return db.query(User).all()
+
+
+
+@router.get("/{user_id}", response_model=UserResponse)
+def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user
+
+
+@router.post("/register", response_model=UserResponse)
+def register_user(user: UserCreate, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.email == user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    new_user = User(
+        full_name=user.full_name,
+        email=user.email,
+        password=user.password,  
+        role=user.role,
+        status="approved" # Auto-approve for immediate access
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+
+from app.schemas.user import UserLogin
+
+@router.post("/login", response_model=UserResponse)
+def login_user(user_creds: UserLogin, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == user_creds.email).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid email or password")
+    
+    if user.password != user_creds.password:
+        raise HTTPException(status_code=400, detail="Invalid email or password")
+    
+    return user
+@router.put("/{user_id}", response_model=UserResponse)
+def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if data.full_name:
+        user.full_name = data.full_name
+    if data.password:
+        user.password = data.password
+    if data.role:
+        user.role = data.role
+    if data.status:
+        user.status = data.status
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.delete("/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    db.delete(user)
+    db.commit()
+    return {"message": "User deleted successfully"}
+
+@router.get("/{user_id}/resume")
+def download_resume(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    profile = db.query(JobSeekerProfile).filter(JobSeekerProfile.user_id == user.id).first()
+    if not profile:
+        # Create a dummy profile if one doesn't exist for basic resume
+        profile = JobSeekerProfile(user_id=user.id) 
+
+    pdf_bytes = generate_resume_pdf(user, profile)
+    
+    return StreamingResponse(
+        io.BytesIO(bytes(pdf_bytes)), 
+        media_type="application/pdf", 
+        headers={"Content-Disposition": f"attachment; filename=resume_{user.full_name.replace(' ', '_')}.pdf"}
+    )
