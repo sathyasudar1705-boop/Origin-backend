@@ -40,13 +40,6 @@ app.include_router(part_time_jobs.router)
 from fastapi.staticfiles import StaticFiles
 import os
 
-# Create uploads directory if getting started
-UPLOAD_DIR = "uploads"
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
-
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
-
 # Stats endpoint for landing page
 from app.db.dependencies import get_db
 from sqlalchemy.orm import Session
