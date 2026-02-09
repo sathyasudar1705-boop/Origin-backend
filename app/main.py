@@ -63,4 +63,17 @@ def get_stats(db: Session = Depends(get_db)):
         "companies": companies_count,
         "applications": applications_count
     }
-# redeploy trigger
+
+@app.get("/test-job", response_model=dict)
+def test_job(db: Session = Depends(get_db)):
+    """Example endpoint to return a Job instance (schema serialized)"""
+    job = db.query(Job).first()
+    if not job:
+        return {"message": "No jobs found in database"}
+    return {
+        "id": job.id,
+        "title": job.title,
+        "description": job.description,
+        "location": job.location,
+        "status": job.status
+    }
