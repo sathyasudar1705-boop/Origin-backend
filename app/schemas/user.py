@@ -15,7 +15,7 @@ class UserUpdate(BaseModel):
     status: str | None = None
 
 
-from app.schemas.companies import CompanyResponse
+from app.schemas.company import CompanyResponse
 
 class UserResponse(BaseModel):
     id: int

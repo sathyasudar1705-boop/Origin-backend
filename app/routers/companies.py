@@ -6,9 +6,9 @@ import shutil
 import os
 from pathlib import Path
 from app.db.dependencies import get_db
-from app.models.companies import Company
+from app.models.company import Company
 from app.models.user import User
-from app.schemas.companies import CompanyCreate, CompanyUpdate, CompanyResponse, CompanyRegister
+from app.schemas.company import CompanyCreate, CompanyUpdate, CompanyResponse, CompanyRegister
 
 router = APIRouter(
     prefix="/companies",
@@ -115,27 +115,5 @@ async def upload_company_logo(
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    # Create uploads directory if not exists (backend/uploads)
-    # Using relative path for simplicity, assuming running from backend root or similar
-    UPLOAD_DIR = "uploads" 
-    if not os.path.exists(UPLOAD_DIR):
-        os.makedirs(UPLOAD_DIR)
-
-    # Generate unique filename
-    file_extension = Path(file.filename).suffix
-    unique_filename = f"company_{company_id}_{int(datetime.now().timestamp())}{file_extension}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
-
-    # Save file
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    # Update database with URL (served via static mount)
-    # URL format: /uploads/filename
-    logo_url = f"/uploads/{unique_filename}"
-    
-    company.logo_url = logo_url
-    db.commit()
-    db.refresh(company)
-
-    return {"logo_url": logo_url}
+    # Vercel has a read-only filesystem. Local uploads are disabled.
+    return {"message": "Local file uploads are disabled on Vercel. Please use an external storage service."}

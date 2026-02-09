@@ -17,7 +17,7 @@ class JobUpdate(BaseModel):
     salary: Optional[str] = None
     status: Optional[str] = None
 
-from app.schemas.companies import CompanyResponse
+from app.schemas.company import CompanyResponse
 
 class JobResponse(BaseModel):
     id: int

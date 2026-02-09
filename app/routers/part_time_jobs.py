@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.dependencies import get_db
-from app.models.part_time_jobs import PartTimeJob
-from app.models.companies import Company
-from app.schemas.part_time_jobs import PartTimeJobCreate, PartTimeJobResponse
+from app.models.part_time_job import PartTimeJob
+from app.models.company import Company
+from app.schemas.part_time_job import PartTimeJobCreate, PartTimeJobResponse
 
 router = APIRouter(
     prefix="/part_time_jobs",

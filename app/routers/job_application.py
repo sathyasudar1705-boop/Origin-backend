@@ -83,8 +83,8 @@ def create_application(data: JobApplicationCreate, background_tasks: BackgroundT
 def get_applications(db: Session = Depends(get_db)):
     return db.query(JobApplication).all()
 
-from app.models.jobs import Job
-from app.models.part_time_jobs import PartTimeJob
+from app.models.job import Job
+from app.models.part_time_job import PartTimeJob
 
 @router.get("/user/{user_id}", response_model=list[JobApplicationResponse])
 def get_user_applications(user_id: int, db: Session = Depends(get_db)):
