@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 from datetime import datetime
 from sqlalchemy import text
+import shutil
+import os
+from pathlib import Path
 from app.db.dependencies import get_db
 from app.models.companies import Company
 from app.models.user import User
@@ -98,6 +101,41 @@ def delete_company(company_id: int, db: Session = Depends(get_db)):
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    db.delete(company)
     db.commit()
     return {"message": "Company deleted successfully"}
+
+
+@router.post("/{company_id}/logo")
+async def upload_company_logo(
+    company_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    # Create uploads directory if not exists (backend/uploads)
+    # Using relative path for simplicity, assuming running from backend root or similar
+    UPLOAD_DIR = "uploads" 
+    if not os.path.exists(UPLOAD_DIR):
+        os.makedirs(UPLOAD_DIR)
+
+    # Generate unique filename
+    file_extension = Path(file.filename).suffix
+    unique_filename = f"company_{company_id}_{int(datetime.now().timestamp())}{file_extension}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+
+    # Save file
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Update database with URL (served via static mount)
+    # URL format: /uploads/filename
+    logo_url = f"/uploads/{unique_filename}"
+    
+    company.logo_url = logo_url
+    db.commit()
+    db.refresh(company)
+
+    return {"logo_url": logo_url}

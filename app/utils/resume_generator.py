@@ -12,67 +12,156 @@ class PDFResponse(FPDF):
         self.set_font('Arial', 'I', 8)
         self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
 
-def generate_resume_pdf(user: User, profile: JobSeekerProfile) -> bytes:
+def generate_resume_pdf(user: User, profile: JobSeekerProfile, options: dict = None) -> bytes:
+    if options is None:
+        options = {"template": "professional", "show_salary": True, "show_location": True, "show_department": True}
+    
+    template = options.get("template", "professional")
+    
     pdf = PDFResponse()
+    pdf.set_margins(15, 15, 15)
     pdf.add_page()
     
-    # Name and Role
-    pdf.set_font('Arial', 'B', 24)
-    pdf.cell(0, 10, user.full_name, 0, 1, 'L')
-    
-    if profile.desired_job:
-        pdf.set_font('Arial', 'I', 14)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(0, 10, profile.desired_job, 0, 1, 'L')
-        pdf.set_text_color(0, 0, 0) # Reset color
-
-    pdf.line(10, 35, 200, 35)
-    pdf.ln(10)
+    # Template specific header/styles
+    if template == "modern":
+        pdf.set_fill_color(15, 23, 42) # Dark background for name section
+        pdf.rect(0, 0, 210, 60, 'F')
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font('Arial', 'B', 28)
+        pdf.set_y(20)
+        pdf.cell(0, 10, user.full_name, 0, 1, 'C')
+        if profile.desired_job:
+            pdf.set_font('Arial', 'I', 14)
+            pdf.cell(0, 8, profile.desired_job, 0, 1, 'C')
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_y(65)
+    elif template == "minimal":
+        pdf.set_font('Arial', 'B', 32)
+        pdf.cell(0, 20, user.full_name.upper(), 0, 1, 'L')
+        pdf.ln(2)
+        pdf.line(15, pdf.get_y(), 60, pdf.get_y())
+        pdf.ln(8)
+    else: # Professional (Default)
+        pdf.set_font('Arial', 'B', 26)
+        pdf.set_text_color(37, 99, 235) # Blue color for name
+        pdf.cell(0, 12, user.full_name, 0, 1, 'L')
+        if profile.desired_job:
+            pdf.set_font('Arial', 'I', 14)
+            pdf.set_text_color(71, 85, 105) # Slate color for job title
+            pdf.cell(0, 8, profile.desired_job, 0, 1, 'L')
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(5)
+        pdf.set_draw_color(226, 232, 240)
+        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+        pdf.ln(8)
 
     # Contact Info
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(20, 6, 'Email:', 0, 0)
     pdf.set_font('Arial', '', 10)
-    pdf.cell(0, 5, f'Email: {user.email}', 0, 1)
-    if profile.phone:
-        pdf.cell(0, 5, f'Phone: {profile.phone}', 0, 1)
-    if profile.location:
-        pdf.cell(0, 5, f'Location: {profile.location}', 0, 1)
+    pdf.cell(70, 6, user.email, 0, 0)
     
-    pdf.ln(10)
+    if profile.phone:
+        pdf.set_font('Arial', 'B', 10)
+        pdf.cell(15, 6, 'Phone:', 0, 0)
+        pdf.set_font('Arial', '', 10)
+        pdf.cell(45, 6, profile.phone, 0, 0)
+    
+    if profile.linkedin_url:
+        pdf.set_font('Arial', 'B', 10)
+        pdf.cell(18, 6, 'LinkedIn:', 0, 0)
+        pdf.set_font('Arial', '', 10)
+        pdf.cell(0, 6, profile.linkedin_url, 0, 1)
+    else:
+        pdf.ln(6)
+        
+    if profile.location:
+        pdf.set_font('Arial', 'B', 10)
+        pdf.cell(18, 6, 'Location:', 0, 0)
+        pdf.set_font('Arial', '', 10)
+        pdf.cell(42, 6, profile.location, 0, 0)
 
-    # Summary
+    if profile.github_url:
+        pdf.set_font('Arial', 'B', 10)
+        pdf.cell(15, 6, 'GitHub:', 0, 0)
+        pdf.set_font('Arial', '', 10)
+        pdf.cell(0, 6, profile.github_url, 0, 1)
+    else:
+        pdf.ln(6)
+    
+    pdf.ln(6)
+
+    # Helper function for section headers
+    def add_section_header(title):
+        pdf.set_font('Arial', 'B', 14)
+        if template == "modern":
+            pdf.set_fill_color(241, 245, 249)
+            pdf.set_text_color(15, 23, 42)
+            pdf.cell(0, 10, f'  {title.upper()}', 0, 1, 'L', True)
+        else:
+            pdf.set_text_color(15, 23, 42)
+            pdf.cell(0, 10, title, 'B', 1)
+        pdf.ln(3)
+        pdf.set_text_color(0, 0, 0)
+
+    # Summary (About Me)
+    if profile.summary:
+        add_section_header('Professional Summary')
+        pdf.set_font('Arial', '', 11)
+        pdf.multi_cell(0, 6, profile.summary)
+        pdf.ln(6)
+
+    # Skills
     if profile.skills:
-        pdf.set_font('Arial', 'B', 14)
-        pdf.cell(0, 10, 'Skills', 0, 1)
-        pdf.set_font('Arial', '', 10)
-        pdf.multi_cell(0, 5, profile.skills)
-        pdf.ln(5)
+        add_section_header('Key Skills')
+        pdf.set_font('Arial', '', 11)
+        pdf.multi_cell(0, 6, profile.skills)
+        pdf.ln(6)
 
-    # Experience (Simple representation as we just have 'experience' integer in model for now)
+    # Projects
+    if profile.projects:
+        add_section_header('Projects')
+        pdf.set_font('Arial', '', 11)
+        pdf.multi_cell(0, 6, profile.projects)
+        pdf.ln(6)
+
+    # Experience
     if profile.experience:
-        pdf.set_font('Arial', 'B', 14)
-        pdf.cell(0, 10, 'Experience', 0, 1)
-        pdf.set_font('Arial', '', 10)
-        pdf.cell(0, 5, f'{profile.experience} Years of Experience', 0, 1)
-        pdf.ln(5)
+        add_section_header('Work Experience')
+        pdf.set_font('Arial', '', 11)
+        pdf.multi_cell(0, 6, f'{profile.experience} years of professional experience in developing impactful solutions and achieving organizational goals.')
+        pdf.ln(6)
 
     # Education
     if profile.education:
-        pdf.set_font('Arial', 'B', 14)
-        pdf.cell(0, 10, 'Education', 0, 1)
-        pdf.set_font('Arial', '', 10)
-        pdf.multi_cell(0, 5, profile.education)
-        if profile.department:
-             pdf.cell(0, 5, f'Department: {profile.department}', 0, 1)
-        pdf.ln(5)
+        add_section_header('Education')
+        pdf.set_font('Arial', '', 11)
+        pdf.multi_cell(0, 6, profile.education)
+        if options.get("show_department", True) and profile.department:
+             pdf.set_font('Arial', 'I', 10)
+             pdf.set_text_color(100, 100, 100)
+             pdf.cell(0, 6, f'Department: {profile.department}', 0, 1)
+             pdf.set_text_color(0, 0, 0)
+        pdf.ln(6)
 
-    # Additional Details
-    pdf.set_font('Arial', 'B', 14)
-    pdf.cell(0, 10, 'Additional Information', 0, 1)
-    pdf.set_font('Arial', '', 10)
+    # Secondary Info
+    show_salary = options.get("show_salary", True)
+    show_loc = options.get("show_location", True)
     
-    if profile.expected_salary:
-        pdf.cell(0, 5, f'Expected Salary: {profile.expected_salary}', 0, 1)
-    if profile.preferred_work_location:
-         pdf.cell(0, 5, f'Preferred Work Location: {profile.preferred_work_location}', 0, 1)
+    if (show_salary and profile.expected_salary) or (show_loc and profile.preferred_work_location):
+        add_section_header('Additional Information')
+        pdf.set_font('Arial', '', 11)
+        
+        if show_salary and profile.expected_salary:
+            pdf.set_font('Arial', 'B', 11)
+            pdf.cell(40, 6, 'Expected Salary:', 0, 0)
+            pdf.set_font('Arial', '', 11)
+            pdf.cell(0, 6, profile.expected_salary, 0, 1)
+            
+        if show_loc and profile.preferred_work_location:
+            pdf.set_font('Arial', 'B', 11)
+            pdf.cell(40, 6, 'Preferred Location:', 0, 0)
+            pdf.set_font('Arial', '', 11)
+            pdf.cell(0, 6, profile.preferred_work_location, 0, 1)
 
     return pdf.output(dest='S')

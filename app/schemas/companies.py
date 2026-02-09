@@ -26,6 +26,7 @@ class CompanyUpdate(BaseModel):
     location: Optional[str] = None
     phone: Optional[str] = None
     industry: Optional[str] = None
+    logo_url: Optional[str] = None
     is_verified: Optional[bool] = None
 
 
@@ -37,6 +38,7 @@ class CompanyResponse(BaseModel):
     industry: Optional[str] = None
     website: Optional[str] = None
     phone: Optional[str] = None
+    logo_url: Optional[str] = None
 
     class Config:
         from_attributes = True

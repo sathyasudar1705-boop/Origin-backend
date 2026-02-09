@@ -96,17 +96,30 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     return {"message": "User deleted successfully"}
 
 @router.get("/{user_id}/resume")
-def download_resume(user_id: int, db: Session = Depends(get_db)):
+def download_resume(
+    user_id: int, 
+    template: str = "professional",
+    show_salary: bool = True,
+    show_location: bool = True,
+    show_department: bool = True,
+    db: Session = Depends(get_db)
+):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
     profile = db.query(JobSeekerProfile).filter(JobSeekerProfile.user_id == user.id).first()
     if not profile:
-        # Create a dummy profile if one doesn't exist for basic resume
         profile = JobSeekerProfile(user_id=user.id) 
 
-    pdf_bytes = generate_resume_pdf(user, profile)
+    options = {
+        "template": template,
+        "show_salary": show_salary,
+        "show_location": show_location,
+        "show_department": show_department
+    }
+
+    pdf_bytes = generate_resume_pdf(user, profile, options)
     
     return StreamingResponse(
         io.BytesIO(bytes(pdf_bytes)), 

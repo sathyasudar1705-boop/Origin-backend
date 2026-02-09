@@ -20,6 +20,10 @@ class JobSeekerProfile(Base):
     expected_salary = Column(String)
     resume_url = Column(String)
     location = Column(String)
+    summary = Column(String)
+    projects = Column(String)
+    github_url = Column(String)
+    linkedin_url = Column(String)
 
 
     

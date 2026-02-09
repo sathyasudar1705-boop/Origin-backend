@@ -1,17 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime
 from app.db.database import SessionLocal
 from app.models.job_application import JobApplication
 from app.db.dependencies import get_db
 from app.schemas.job_application import JobApplicationCreate,JobApplicationUpdate,JobApplicationResponse
+from app.utils.email import send_application_alert
 
 router = APIRouter(prefix="/applications", tags=["Job Applications"])
 
 
 
 @router.post("/", response_model=JobApplicationResponse)
-def create_application(data: JobApplicationCreate, db: Session = Depends(get_db)):
+def create_application(data: JobApplicationCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     if data.job_id:
         existing = db.query(JobApplication).filter(
             JobApplication.job_id == data.job_id,
@@ -26,7 +27,27 @@ def create_application(data: JobApplicationCreate, db: Session = Depends(get_db)
         existing = None
 
     if existing:
-        raise HTTPException(status_code=400, detail="Already applied")
+        # Instead of error, update the existing application
+        app_data = data.dict(exclude_unset=True)
+        app_data["created_at"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+        app_data["status"] = "Applied" # Reset status to Applied on re-apply
+        
+        for key, value in app_data.items():
+            setattr(existing, key, value)
+        
+        db.commit()
+        db.refresh(existing)
+        
+        # Trigger email notification
+        try:
+            if existing.job:
+                background_tasks.add_task(send_application_alert, existing.job.company.email, existing.full_name, existing.job.title)
+            elif existing.pt_job:
+                background_tasks.add_task(send_application_alert, existing.pt_job.company.email, existing.full_name, existing.pt_job.title)
+        except Exception as e:
+            print(f"Error triggering email: {e}")
+
+        return existing
 
     app_data = data.dict()
     app_data["created_at"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
@@ -41,6 +62,16 @@ def create_application(data: JobApplicationCreate, db: Session = Depends(get_db)
         db.add(app_obj)
         db.commit()
         db.refresh(app_obj)
+
+        # Trigger email notification
+        try:
+            if app_obj.job:
+                background_tasks.add_task(send_application_alert, app_obj.job.company.email, app_obj.full_name, app_obj.job.title)
+            elif app_obj.pt_job:
+                background_tasks.add_task(send_application_alert, app_obj.pt_job.company.email, app_obj.full_name, app_obj.pt_job.title)
+        except Exception as e:
+            print(f"Error triggering email: {e}")
+
         return app_obj
     except Exception as e:
         db.rollback()
@@ -74,7 +105,17 @@ def get_company_applications(company_id: int, db: Session = Depends(get_db)):
     # Applications for part-time jobs
     part_time_apps = db.query(JobApplication).join(PartTimeJob).filter(PartTimeJob.company_id == company_id).all()
     
-    return full_time_apps + part_time_apps
+    all_apps = full_time_apps + part_time_apps
+    
+    for app in all_apps:
+        if app.job:
+            app.job_title = app.job.title
+            app.job_location = app.job.location
+        elif app.pt_job:
+            app.job_title = app.pt_job.title
+            app.job_location = app.pt_job.location
+            
+    return all_apps
 
 
 @router.get("/{application_id}", response_model=JobApplicationResponse)

@@ -2,8 +2,6 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import date
 
-
-
 class JobSeekerProfileCreate(BaseModel):
     user_id: int
     gender: Optional[str] = None
@@ -19,14 +17,16 @@ class JobSeekerProfileCreate(BaseModel):
     expected_salary: Optional[str] = None
     location: Optional[str] = None
     resume_url: Optional[str] = None
-
+    summary: Optional[str] = None
+    projects: Optional[str] = None
+    github_url: Optional[str] = None
+    linkedin_url: Optional[str] = None
 
 class JobSeekerProfileUpdate(BaseModel):
     gender: Optional[str] = None
     dob: Optional[date] = None
     phone: Optional[str] = None
     address: Optional[str] = None
-
     skills: Optional[str] = None
     experience: Optional[int] = None
     education: Optional[str] = None
@@ -34,15 +34,16 @@ class JobSeekerProfileUpdate(BaseModel):
     desired_job: Optional[str] = None
     preferred_work_location: Optional[str] = None
     expected_salary: Optional[str] = None
-
     location: Optional[str] = None
     resume_url: Optional[str] = None
-
+    summary: Optional[str] = None
+    projects: Optional[str] = None
+    github_url: Optional[str] = None
+    linkedin_url: Optional[str] = None
 
 class JobSeekerProfileResponse(BaseModel):
     id: int
     user_id: int
-
     gender: Optional[str]
     dob: Optional[date]
     phone: Optional[str]
@@ -56,12 +57,13 @@ class JobSeekerProfileResponse(BaseModel):
     expected_salary: Optional[str]
     location: Optional[str]
     resume_url: Optional[str]
+    summary: Optional[str]
+    projects: Optional[str]
+    github_url: Optional[str]
+    linkedin_url: Optional[str]
 
     class Config:
         from_attributes = True
-
-
-
 
 class JobSeekerProfileView(BaseModel):
     name: str
@@ -78,6 +80,10 @@ class JobSeekerProfileView(BaseModel):
     preferred_work_location: Optional[str]
     expected_salary: Optional[str]
     resume_url: Optional[str]
+    summary: Optional[str]
+    projects: Optional[str]
+    github_url: Optional[str]
+    linkedin_url: Optional[str]
 
     class Config:
         from_attributes = True
