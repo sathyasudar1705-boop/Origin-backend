@@ -37,8 +37,7 @@ app.include_router(job_application.router)
 app.include_router(companies.router)
 app.include_router(part_time_jobs.router)
 
-from fastapi.staticfiles import StaticFiles
-import os
+
 
 # Stats endpoint for landing page
 from app.db.dependencies import get_db
