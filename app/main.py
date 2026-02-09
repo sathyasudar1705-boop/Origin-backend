@@ -64,3 +64,4 @@ def get_stats(db: Session = Depends(get_db)):
         "companies": companies_count,
         "applications": applications_count
     }
+# redeploy trigger
