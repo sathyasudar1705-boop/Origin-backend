@@ -11,9 +11,28 @@ from app.routers import upload
 from app.routers import news
 
 
-Base.metadata.create_all(bind=engine)
+import logging
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="OriginX - Users API")
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Create tables if they don't exist
+    # Note: In serverless, this runs on cold starts.
+    logger.info("Initializing database tables...")
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables initialized successfully.")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+    yield
+    # Shutdown: Clean up resources if needed
+    logger.info("Shutting down...")
+
+app = FastAPI(title="OriginX - Users API", lifespan=lifespan)
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -21,10 +40,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://origin-frontend-sepia.vercel.app",
+        "https://origin-frontend-nine.vercel.app", # Potential production URL
         "http://localhost:5500",
         "http://localhost:8000",
         "http://127.0.0.1:5500",
-        "*"  # Allow all origins (can remove this for stricter security)
+        "*" 
     ],
     allow_credentials=True,
     allow_methods=["*"],
