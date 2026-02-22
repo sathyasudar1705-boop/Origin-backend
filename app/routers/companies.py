@@ -65,6 +65,11 @@ def register_company(data: CompanyRegister, db: Session = Depends(get_db)):
     return new_user
 
 
+@router.get("/", response_model=list[CompanyResponse])
+def get_companies(db: Session = Depends(get_db)):
+    return db.query(Company).all()
+
+
 @router.get("/{company_id}", response_model=CompanyResponse)
 def get_company(company_id: int, db: Session = Depends(get_db)):
     company = db.query(Company).filter(Company.id == company_id).first()
@@ -95,14 +100,27 @@ def update_company(
 
 
 
+from app.schemas.user import AccountDelete
+from app.core.security import verify_password
+
 @router.delete("/{company_id}")
-def delete_company(company_id: int, db: Session = Depends(get_db)):
+def delete_company(company_id: int, data: AccountDelete, db: Session = Depends(get_db)):
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
+    user = db.query(User).filter(User.id == company.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Associated user not found")
+
+    # Verify Password
+    if not verify_password(data.password, user.password):
+        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail="Invalid password. Deletion aborted.")
+
+    # Deleting the user will cascade delete the company due to our model changes
+    db.delete(user)
     db.commit()
-    return {"message": "Company deleted successfully"}
+    return {"message": "Company and associated account deleted successfully"}
 
 
 @router.post("/{company_id}/logo")

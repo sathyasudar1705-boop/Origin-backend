@@ -7,6 +7,8 @@ from app.routers import jobs
 from app.routers import job_application
 from app.routers import companies
 from app.routers import part_time_jobs
+from app.routers import upload
+from app.routers import news
 
 
 Base.metadata.create_all(bind=engine)
@@ -36,6 +38,8 @@ app.include_router(jobs.router)
 app.include_router(job_application.router)
 app.include_router(companies.router)
 app.include_router(part_time_jobs.router)
+app.include_router(upload.router)
+app.include_router(news.router)
 
 
 

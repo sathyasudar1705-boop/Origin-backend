@@ -27,18 +27,22 @@ class CompanyUpdate(BaseModel):
     phone: Optional[str] = None
     industry: Optional[str] = None
     logo_url: Optional[str] = None
+    logo: Optional[str] = None
     is_verified: Optional[bool] = None
 
 
 class CompanyResponse(BaseModel):
     id: int
+    user_id: Optional[int] = None
     company_name: str
+    email: Optional[str] = None
     location: Optional[str] = None
     description: Optional[str] = None
     industry: Optional[str] = None
     website: Optional[str] = None
     phone: Optional[str] = None
     logo_url: Optional[str] = None
+    logo: Optional[str] = None
 
     class Config:
         from_attributes = True

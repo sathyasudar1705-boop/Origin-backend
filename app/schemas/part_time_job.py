@@ -9,15 +9,18 @@ class PartTimeJobCreate(BaseModel):
     skills: Optional[str] = None
     description: Optional[str] = None
 
+from app.schemas.company import CompanyResponse
+
 class PartTimeJobResponse(BaseModel):
     id: int
     title: str
     company_id: int
-    company_name: str
     location: Optional[str] = None
     salary: Optional[str] = None
     skills: Optional[str] = None
     description: Optional[str] = None
+    company: Optional[CompanyResponse] = None
 
     class Config:
         from_attributes = True
+

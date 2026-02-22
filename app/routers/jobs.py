@@ -30,6 +30,12 @@ def get_jobs(q: str = None, location: str = None, db: Session = Depends(get_db))
 
 
 
+@router.get("/company/{company_id}", response_model=list[JobResponse])
+def get_jobs_by_company(company_id: int, db: Session = Depends(get_db)):
+    return db.query(Job).filter(Job.company_id == company_id).all()
+
+
+
 @router.get("/{job_id}", response_model=JobResponse)
 def get_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(Job).get(job_id)

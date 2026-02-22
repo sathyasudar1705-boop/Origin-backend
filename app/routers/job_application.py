@@ -90,12 +90,19 @@ from app.models.part_time_job import PartTimeJob
 def get_user_applications(user_id: int, db: Session = Depends(get_db)):
     apps = db.query(JobApplication).filter(JobApplication.user_id == user_id).all()
     for app in apps:
+        app.candidate_profile_image = app.user.profile_image if app.user else None
         if app.job:
             app.job_title = app.job.title
             app.job_location = app.job.location
+            app.company_name = app.job.company.company_name
+            app.company_id = app.job.company.id
+            app.company_logo = app.job.company.logo_url or app.job.company.logo
         elif app.pt_job:
             app.job_title = app.pt_job.title
             app.job_location = app.pt_job.location
+            app.company_name = app.pt_job.company.company_name
+            app.company_id = app.pt_job.company.id
+            app.company_logo = app.pt_job.company.logo_url or app.pt_job.company.logo
     return apps
 
 @router.get("/company/{company_id}", response_model=list[JobApplicationResponse])
@@ -108,12 +115,19 @@ def get_company_applications(company_id: int, db: Session = Depends(get_db)):
     all_apps = full_time_apps + part_time_apps
     
     for app in all_apps:
+        app.candidate_profile_image = app.user.profile_image if app.user else None
         if app.job:
             app.job_title = app.job.title
             app.job_location = app.job.location
+            app.company_name = app.job.company.company_name
+            app.company_id = app.job.company.id
+            app.company_logo = app.job.company.logo_url or app.job.company.logo
         elif app.pt_job:
             app.job_title = app.pt_job.title
             app.job_location = app.pt_job.location
+            app.company_name = app.pt_job.company.company_name
+            app.company_id = app.pt_job.company.id
+            app.company_logo = app.pt_job.company.logo_url or app.pt_job.company.logo
             
     return all_apps
 
@@ -126,11 +140,16 @@ def get_application(application_id: int, db: Session = Depends(get_db)):
     return app_obj
 
 
+VALID_STATUSES = ["Applied", "Shortlisted", "Selected", "Cancelled"]
+
 @router.put("/{application_id}", response_model=JobApplicationResponse)
 def update_application(application_id: int, data: JobApplicationUpdate, db: Session = Depends(get_db)):
     app_obj = db.query(JobApplication).get(application_id)
     if not app_obj:
         raise HTTPException(status_code=404, detail="Application not found")
+
+    if data.status and data.status not in VALID_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Allowed: {VALID_STATUSES}")
 
     for key, value in data.dict(exclude_unset=True).items():
         setattr(app_obj, key, value)

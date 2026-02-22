@@ -28,6 +28,9 @@ class JobApplicationResponse(BaseModel):
     created_at: Optional[str] = None
     job_title: Optional[str] = None
     job_location: Optional[str] = None
+    company_name: Optional[str] = None
+    company_id: Optional[int] = None
+    company_logo: Optional[str] = None
     full_name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
@@ -36,6 +39,7 @@ class JobApplicationResponse(BaseModel):
     skills: Optional[str] = None
     expected_salary: Optional[str] = None
     current_location: Optional[str] = None
+    candidate_profile_image: Optional[str] = None
 
 
     class Config:

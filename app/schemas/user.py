@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class UserCreate(BaseModel):
     full_name: str
@@ -11,7 +12,7 @@ class UserUpdate(BaseModel):
     full_name: str | None = None
     email: str | None = None
     password: str | None = None
-    role: str | None = None
+    profile_image: str | None = None
     status: str | None = None
 
 
@@ -23,6 +24,7 @@ class UserResponse(BaseModel):
     email: str
     role: str
     status: str
+    profile_image: str | None = None
     company: CompanyResponse | None = None
 
     class Config:
@@ -30,4 +32,7 @@ class UserResponse(BaseModel):
 
 class UserLogin(BaseModel):
     email: str
+    password: str
+
+class AccountDelete(BaseModel):
     password: str

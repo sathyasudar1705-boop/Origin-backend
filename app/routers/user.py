@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.database import SessionLocal
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse,UserUpdate
-from app.db.dependencies import get_db
+from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.db.dependencies import get_db, get_current_user
 from fastapi.responses import StreamingResponse
 from app.utils.resume_generator import generate_resume_pdf
 from app.models.job_seeker_profile import JobSeekerProfile
+from app.core.security import get_password_hash, verify_password, create_access_token
 import io
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -41,7 +42,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     new_user = User(
         full_name=user.full_name,
         email=user.email,
-        password=user.password,  
+        password=get_password_hash(user.password),  
         role=user.role,
         status="approved" # Auto-approve for immediate access
     )
@@ -52,17 +53,56 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 
 from app.schemas.user import UserLogin
+from app.models.company import Company
 
-@router.post("/login", response_model=UserResponse)
+@router.post("/login")
 def login_user(user_creds: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == user_creds.email).first()
     if not user:
         raise HTTPException(status_code=400, detail="Invalid email or password")
     
-    if user.password != user_creds.password:
+    if not verify_password(user_creds.password, user.password):
         raise HTTPException(status_code=400, detail="Invalid email or password")
     
-    return user
+    access_token = create_access_token(subject=user.id)
+
+    # Build user dict
+    user_data = {
+        "id": user.id,
+        "full_name": user.full_name,
+        "email": user.email,
+        "role": user.role,
+        "status": user.status,
+        "profile_image": user.profile_image if hasattr(user, 'profile_image') else None,
+        "company": None
+    }
+
+    # If employer, also load their company
+    if user.role == "employer":
+        company = db.query(Company).filter(Company.user_id == user.id).first()
+        if company:
+            user_data["company"] = {
+                "id": company.id,
+                "company_name": company.company_name,
+                "email": company.email,
+                "phone": company.phone,
+                "location": company.location,
+                "website": company.website,
+                "description": company.description,
+                "industry": company.industry,
+                "logo_url": company.logo_url,
+            }
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user_data
+    }
+
+@router.get("/me", response_model=UserResponse)
+def read_users_me(current_user: User = Depends(get_current_user)):
+    """Example protected route to get current user info"""
+    return current_user
 @router.put("/{user_id}", response_model=UserResponse)
 def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
@@ -78,18 +118,26 @@ def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db)):
         user.role = data.role
     if data.status:
         user.status = data.status
+    if data.profile_image:
+        user.profile_image = data.profile_image
 
     db.commit()
     db.refresh(user)
     return user
 
 
+from app.schemas.user import AccountDelete
+
 @router.delete("/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(user_id: int, data: AccountDelete, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Verify Password
+    if not verify_password(data.password, user.password):
+        raise HTTPException(status_code=400, detail="Invalid password. Deletion aborted.")
 
     db.delete(user)
     db.commit()

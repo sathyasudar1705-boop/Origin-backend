@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker,declarative_base
 
 from app.core.config import settings
 
-# Handle potential postgres:// prefix from Supabase/Heroku
+
 db_url = settings.DATABASE_URL
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)

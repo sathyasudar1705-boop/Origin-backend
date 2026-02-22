@@ -9,7 +9,7 @@ class JobApplication(Base):
     pt_job_id = Column(Integer, ForeignKey("part_time_jobs.id"))
     user_id = Column(Integer, ForeignKey("users.id")) 
     status = Column(String, default="Applied")
-    created_at = Column(String) # For simplicity, storing as string or I can use DateTime
+    created_at = Column(String) 
     
     # Application details snapshot
     full_name = Column(String)

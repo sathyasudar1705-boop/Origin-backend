@@ -28,17 +28,7 @@ def create_part_time_job(job: PartTimeJobCreate, db: Session = Depends(get_db)):
     db.add(new_job)
     db.commit()
     db.refresh(new_job)
-
-    return PartTimeJobResponse(
-        id=new_job.id,
-        title=new_job.title,
-        company_id=new_job.company_id,
-        company_name=company.company_name,
-        location=new_job.location,
-        salary=new_job.salary,
-        skills=new_job.skills,
-        description=new_job.description
-    )
+    return new_job
 
 
 @router.get("/{job_id}", response_model=PartTimeJobResponse)
@@ -46,19 +36,7 @@ def get_part_time_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(PartTimeJob).filter(PartTimeJob.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-
-    company = db.query(Company).filter(Company.id == job.company_id).first()
-
-    return PartTimeJobResponse(
-        id=job.id,
-        title=job.title,
-        company_id=job.company_id,
-        company_name=company.company_name if company else "Unknown",
-        location=job.location,
-        salary=job.salary,
-        skills=job.skills,
-        description=job.description
-    )
+    return job
 
 
 @router.get("/", response_model=list[PartTimeJobResponse])
@@ -68,24 +46,7 @@ def get_all_part_time_jobs(q: str = None, location: str = None, db: Session = De
         query = query.filter(PartTimeJob.title.ilike(f"%{q}%") | PartTimeJob.description.ilike(f"%{q}%"))
     if location:
         query = query.filter(PartTimeJob.location.ilike(f"%{location}%"))
-    
-    jobs = query.all()
-    response = []
-    for job in jobs:
-        company = db.query(Company).filter(Company.id == job.company_id).first()
-        response.append(
-            PartTimeJobResponse(
-                id=job.id, # Added in previous step
-                title=job.title,
-                company_id=job.company_id,
-                company_name=company.company_name if company else "Unknown",
-                location=job.location,
-                salary=job.salary,
-                skills=job.skills,
-                description=job.description
-            )
-        )
-    return response
+    return query.all()
 
 
 
@@ -108,17 +69,8 @@ def update_part_time_job(job_id: int, job_update: PartTimeJobCreate, db: Session
 
     db.commit()
     db.refresh(job)
+    return job
 
-    return PartTimeJobResponse(
-        id=job.id,
-        title=job.title,
-        company_id=job.company_id,
-        company_name=company.company_name,
-        location=job.location,
-        salary=job.salary,
-        skills=job.skills,
-        description=job.description
-    )
 
 
 
