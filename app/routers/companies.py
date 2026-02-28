@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, status
 from sqlalchemy.orm import Session
 from datetime import datetime
 from sqlalchemy import text
@@ -9,6 +9,7 @@ from app.db.dependencies import get_db
 from app.models.company import Company
 from app.models.user import User
 from app.schemas.company import CompanyCreate, CompanyUpdate, CompanyResponse, CompanyRegister
+from app.core.security import get_password_hash, verify_password
 
 router = APIRouter(
     prefix="/companies",
@@ -34,12 +35,17 @@ def register_company(data: CompanyRegister, db: Session = Depends(get_db)):
     # 1. Create User
     existing_user = db.query(User).filter(User.email == data.email).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Email already registered as a user")
     
+    # Check if company email already exists
+    existing_company = db.query(Company).filter(Company.email == data.email).first()
+    if existing_company:
+        raise HTTPException(status_code=400, detail="Company email already registered")
+
     new_user = User(
         full_name=data.full_name,
         email=data.email,
-        password=data.password,
+        password=get_password_hash(data.password), # Hash the password
         role="employer",
         status="approved" # Employers are auto-approved for now
     )
@@ -115,7 +121,7 @@ def delete_company(company_id: int, data: AccountDelete, db: Session = Depends(g
 
     # Verify Password
     if not verify_password(data.password, user.password):
-        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail="Invalid password. Deletion aborted.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid password. Deletion aborted.")
 
     # Deleting the user will cascade delete the company due to our model changes
     db.delete(user)

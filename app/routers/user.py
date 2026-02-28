@@ -110,15 +110,17 @@ def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if data.full_name:
+    if data.full_name is not None:
         user.full_name = data.full_name
-    if data.password:
-        user.password = data.password
-    if data.role:
+    if data.email is not None:
+        user.email = data.email
+    if data.password is not None:
+        user.password = get_password_hash(data.password)
+    if data.role is not None:
         user.role = data.role
-    if data.status:
+    if data.status is not None:
         user.status = data.status
-    if data.profile_image:
+    if data.profile_image is not None:
         user.profile_image = data.profile_image
 
     db.commit()
@@ -170,7 +172,7 @@ def download_resume(
     pdf_bytes = generate_resume_pdf(user, profile, options)
     
     return StreamingResponse(
-        io.BytesIO(bytes(pdf_bytes)), 
+        io.BytesIO(pdf_bytes), 
         media_type="application/pdf", 
         headers={"Content-Disposition": f"attachment; filename=resume_{user.full_name.replace(' ', '_')}.pdf"}
     )

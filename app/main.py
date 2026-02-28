@@ -40,7 +40,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://origin-frontend-sepia.vercel.app",
-        "https://origin-frontend-nine.vercel.app", # Potential production URL
+        "https://origin-frontend-nine.vercel.app",
         "http://localhost:5500",
         "http://localhost:8000",
         "http://127.0.0.1:5500",

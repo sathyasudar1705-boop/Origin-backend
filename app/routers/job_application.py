@@ -140,7 +140,7 @@ def get_application(application_id: int, db: Session = Depends(get_db)):
     return app_obj
 
 
-VALID_STATUSES = ["Applied", "Shortlisted", "Selected", "Cancelled"]
+VALID_STATUSES = ["Applied", "Shortlisted", "Selected", "Rejected"]
 
 @router.put("/{application_id}", response_model=JobApplicationResponse)
 def update_application(application_id: int, data: JobApplicationUpdate, db: Session = Depends(get_db)):
